@@ -125,7 +125,7 @@ export const createMaterial = (type: string, color: number = 0x4f46e5): THREE.Ma
 /**
  * 创建场景基础设置
  */
-export const createSceneSetup = (): {
+export const createSceneSetup = (containerWidth: number = 800, containerHeight: number = 384): {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
@@ -133,9 +133,11 @@ export const createSceneSetup = (): {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x1a1a1a);
 
+  // 使用容器的实际宽高比，而不是窗口的宽高比
+  const aspect = containerWidth / containerHeight;
   const camera = new THREE.PerspectiveCamera(
     75,
-    window.innerWidth / window.innerHeight,
+    aspect,
     0.1,
     1000
   );
@@ -143,9 +145,13 @@ export const createSceneSetup = (): {
   camera.lookAt(0, 0, 0);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(800, 600); // 固定尺寸，避免重叠
+  renderer.setSize(containerWidth, containerHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // 确保renderer.domElement可以正确设置样式
+  renderer.domElement.style.display = 'block';
+  renderer.domElement.style.maxWidth = '100%';
+  renderer.domElement.style.height = 'auto';
 
   return { scene, camera, renderer };
 };

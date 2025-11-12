@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import Home from "@/pages/Home";
 import GeometryViewer from "@/pages/GeometryViewer";
 import LearningPage from "@/pages/LearningPage";
@@ -19,6 +20,7 @@ export default function App() {
           </Routes>
         </main>
       </div>
+      <SpeedInsights />
     </Router>
   );
 }

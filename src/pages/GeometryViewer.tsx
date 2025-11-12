@@ -34,8 +34,10 @@ export default function GeometryViewer() {
     // 记录学习进度
     updateLearningProgress(type!);
 
-    // 初始化场景
-    const { scene, camera, renderer } = createSceneSetup();
+    // 初始化场景 - 使用容器的实际尺寸
+    const containerWidth = 800;
+    const containerHeight = 384;
+    const { scene, camera, renderer } = createSceneSetup(containerWidth, containerHeight);
     sceneRef.current = scene;
     cameraRef.current = camera;
     rendererRef.current = renderer;
@@ -68,8 +70,28 @@ export default function GeometryViewer() {
       const deltaX = event.clientX - mouseX;
       const deltaY = event.clientY - mouseY;
       
-      meshRef.current.rotation.y += deltaX * 0.01;
-      meshRef.current.rotation.x += deltaY * 0.01;
+      // 改进旋转逻辑：根据几何体类型调整旋转方式
+      switch (type) {
+        case 'sphere':
+          // 球体：使用更自然的旋转方式，避免"锁定"效果
+          meshRef.current.rotation.y += deltaX * 0.01;
+          meshRef.current.rotation.x += deltaY * 0.01;
+          // 允许Z轴旋转，让球体看起来更自然
+          meshRef.current.rotation.z += (deltaX + deltaY) * 0.005;
+          break;
+        case 'cylinder':
+        case 'cone':
+          // 圆柱体和圆锥体：主要绕Y轴旋转，但允许X轴倾斜
+          meshRef.current.rotation.y += deltaX * 0.01;
+          meshRef.current.rotation.x += deltaY * 0.01;
+          // 轻微的Z轴旋转增加真实感
+          meshRef.current.rotation.z += deltaY * 0.003;
+          break;
+        default:
+          // 立方体、圆环、四面体：标准旋转
+          meshRef.current.rotation.y += deltaX * 0.01;
+          meshRef.current.rotation.x += deltaY * 0.01;
+      }
       
       mouseX = event.clientX;
       mouseY = event.clientY;
@@ -77,6 +99,17 @@ export default function GeometryViewer() {
 
     const handleMouseUp = () => {
       mouseDown = false;
+    };
+
+    const handleDoubleClick = () => {
+      if (!cameraRef.current) return;
+      // 重置相机位置到初始视角
+      cameraRef.current.position.set(3, 3, 3);
+      cameraRef.current.lookAt(0, 0, 0);
+      // 重置几何体旋转
+      if (meshRef.current) {
+        meshRef.current.rotation.set(0, 0, 0);
+      }
     };
 
     const handleWheel = (event: WheelEvent) => {
@@ -87,19 +120,67 @@ export default function GeometryViewer() {
       cameraRef.current.lookAt(0, 0, 0);
     };
 
+    // 设置3D画布样式，确保正确嵌入
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.top = '0';
+    renderer.domElement.style.left = '0';
     renderer.domElement.addEventListener('mousedown', handleMouseDown);
     renderer.domElement.addEventListener('mousemove', handleMouseMove);
     renderer.domElement.addEventListener('mouseup', handleMouseUp);
     renderer.domElement.addEventListener('wheel', handleWheel);
+    renderer.domElement.addEventListener('dblclick', handleDoubleClick);
 
-    mountRef.current.appendChild(renderer.domElement);
+    // 清空容器并添加3D画布
+    if (mountRef.current) {
+      mountRef.current.innerHTML = '';
+      
+      // 添加加载提示
+      const loadingDiv = document.createElement('div');
+      loadingDiv.className = 'absolute inset-0 flex items-center justify-center text-gray-400 text-center text-sm z-10';
+      loadingDiv.innerHTML = `
+        <div>
+          <div class="text-2xl mb-2 animate-spin">🔄</div>
+          <div>3D模型加载中...</div>
+        </div>
+      `;
+      mountRef.current.appendChild(loadingDiv);
+      
+      // 添加3D画布
+      mountRef.current.appendChild(renderer.domElement);
+      
+      // 2秒后移除加载提示
+      setTimeout(() => {
+        if (loadingDiv.parentNode) {
+          loadingDiv.parentNode.removeChild(loadingDiv);
+        }
+      }, 2000);
+    }
 
     // 动画循环
     const animate = () => {
       frameRef.current = requestAnimationFrame(animate);
       
       if (meshRef.current && autoRotate) {
-        meshRef.current.rotation.y += 0.005;
+        // 根据几何体类型调整自动旋转方式
+        switch (type) {
+          case 'sphere':
+            // 球体：多轴旋转，看起来更自然
+            meshRef.current.rotation.y += 0.005;
+            meshRef.current.rotation.x += 0.002;
+            meshRef.current.rotation.z += 0.001;
+            break;
+          case 'cylinder':
+          case 'cone':
+            // 圆柱体和圆锥体：主要绕Y轴，轻微X轴旋转
+            meshRef.current.rotation.y += 0.005;
+            meshRef.current.rotation.x += 0.001;
+            break;
+          default:
+            // 立方体、圆环、四面体：标准Y轴旋转
+            meshRef.current.rotation.y += 0.005;
+        }
       }
       
       if (rendererRef.current && sceneRef.current && cameraRef.current) {
@@ -121,6 +202,7 @@ export default function GeometryViewer() {
       renderer.domElement.removeEventListener('mousemove', handleMouseMove);
       renderer.domElement.removeEventListener('mouseup', handleMouseUp);
       renderer.domElement.removeEventListener('wheel', handleWheel);
+      renderer.domElement.removeEventListener('dblclick', handleDoubleClick);
       
       if (mountRef.current && renderer.domElement) {
         mountRef.current.removeChild(renderer.domElement);
@@ -241,12 +323,9 @@ export default function GeometryViewer() {
             </div>
             <div 
               ref={mountRef} 
-              className="w-full h-96 bg-gray-900 rounded-lg flex items-center justify-center"
+              className="w-full h-96 bg-gray-900 rounded-lg overflow-hidden relative"
             >
-              <div className="text-gray-400 text-center">
-                <div className="text-4xl mb-2">🔄</div>
-                <div>3D模型加载中...</div>
-              </div>
+              {/* 3D画布将在这里动态插入 */}
             </div>
             <div className="mt-4 text-sm text-gray-600">
               <p>💡 提示：拖拽鼠标旋转模型，滚轮缩放，双击重置视角</p>
