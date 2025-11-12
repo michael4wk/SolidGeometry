@@ -143,7 +143,7 @@ export const createSceneSetup = (): {
   camera.lookAt(0, 0, 0);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(window.innerWidth * 0.7, window.innerHeight * 0.7);
+  renderer.setSize(800, 600); // 固定尺寸，避免重叠
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
