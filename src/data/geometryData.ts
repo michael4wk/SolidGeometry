@@ -116,7 +116,7 @@ export const geometryConfigs: Record<string, GeometryConfig> = {
     type: 'tetrahedron',
     name: '四面体',
     description: '由四个三角形面组成的多面体，是最简单的多面体',
-    defaultParams: { radius: 1 },
+    defaultParams: { radius: 2 },
     formula: {
       surfaceArea: 'S = √3a²',
       volume: 'V = (a³√2)/12'

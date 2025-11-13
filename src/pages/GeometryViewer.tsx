@@ -71,7 +71,7 @@ export default function GeometryViewer() {
       const deltaX = event.clientX - mouseX;
       const deltaY = event.clientY - mouseY;
       
-      // 改进旋转逻辑：根据几何体类型调整旋转方式
+      // 统一所有几何体的旋转逻辑，确保丝滑的旋转体验
       switch (type) {
         case 'sphere':
           // 球体：使用更自然的旋转方式，避免"锁定"效果
@@ -80,16 +80,9 @@ export default function GeometryViewer() {
           // 允许Z轴旋转，让球体看起来更自然
           meshRef.current.rotation.z += (deltaX + deltaY) * 0.005;
           break;
-        case 'cylinder':
-        case 'cone':
-          // 圆柱体和圆锥体：主要绕Y轴旋转，但允许X轴倾斜
-          meshRef.current.rotation.y += deltaX * 0.01;
-          meshRef.current.rotation.x += deltaY * 0.01;
-          // 轻微的Z轴旋转增加真实感
-          meshRef.current.rotation.z += deltaY * 0.003;
-          break;
         default:
-          // 立方体、圆环、四面体：标准旋转
+          // 立方体、圆环、四面体、圆柱体、圆锥体：统一使用标准旋转
+          // 这样可以确保所有几何体都有相同的丝滑旋转体验
           meshRef.current.rotation.y += deltaX * 0.01;
           meshRef.current.rotation.x += deltaY * 0.01;
       }
@@ -114,20 +107,16 @@ export default function GeometryViewer() {
       const deltaX = event.touches[0].clientX - mouseX;
       const deltaY = event.touches[0].clientY - mouseY;
       
-      // 使用与鼠标相同的旋转逻辑
+      // 统一所有几何体的旋转逻辑，确保丝滑的旋转体验
       switch (type) {
         case 'sphere':
           meshRef.current.rotation.y += deltaX * 0.01;
           meshRef.current.rotation.x += deltaY * 0.01;
           meshRef.current.rotation.z += (deltaX + deltaY) * 0.005;
           break;
-        case 'cylinder':
-        case 'cone':
-          meshRef.current.rotation.y += deltaX * 0.01;
-          meshRef.current.rotation.x += deltaY * 0.01;
-          meshRef.current.rotation.z += deltaY * 0.003;
-          break;
         default:
+          // 立方体、圆环、四面体、圆柱体、圆锥体：统一使用标准旋转
+          // 这样可以确保所有几何体都有相同的丝滑旋转体验
           meshRef.current.rotation.y += deltaX * 0.01;
           meshRef.current.rotation.x += deltaY * 0.01;
       }
