@@ -57,6 +57,7 @@ export default function GeometryViewer() {
     let mouseDown = false;
     let mouseX = 0;
     let mouseY = 0;
+    let lastTouchDistance = 0; // 用于双指缩放
 
     const handleMouseDown = (event: MouseEvent) => {
       mouseDown = true;
@@ -97,6 +98,74 @@ export default function GeometryViewer() {
       mouseY = event.clientY;
     };
 
+    // 触摸事件处理函数
+    const handleTouchStart = (event: TouchEvent) => {
+      if (event.touches.length === 1) {
+        mouseDown = true;
+        mouseX = event.touches[0].clientX;
+        mouseY = event.touches[0].clientY;
+        event.preventDefault(); // 防止页面滚动
+      }
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (!mouseDown || !meshRef.current || event.touches.length !== 1) return;
+      
+      const deltaX = event.touches[0].clientX - mouseX;
+      const deltaY = event.touches[0].clientY - mouseY;
+      
+      // 使用与鼠标相同的旋转逻辑
+      switch (type) {
+        case 'sphere':
+          meshRef.current.rotation.y += deltaX * 0.01;
+          meshRef.current.rotation.x += deltaY * 0.01;
+          meshRef.current.rotation.z += (deltaX + deltaY) * 0.005;
+          break;
+        case 'cylinder':
+        case 'cone':
+          meshRef.current.rotation.y += deltaX * 0.01;
+          meshRef.current.rotation.x += deltaY * 0.01;
+          meshRef.current.rotation.z += deltaY * 0.003;
+          break;
+        default:
+          meshRef.current.rotation.y += deltaX * 0.01;
+          meshRef.current.rotation.x += deltaY * 0.01;
+      }
+      
+      mouseX = event.touches[0].clientX;
+      mouseY = event.touches[0].clientY;
+      event.preventDefault(); // 防止页面滚动
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      mouseDown = false;
+      lastTouchDistance = 0; // 重置触摸距离
+      event.preventDefault();
+    };
+
+    const handleTouchZoom = (event: TouchEvent) => {
+      if (event.touches.length !== 2 || !cameraRef.current) return;
+      
+      event.preventDefault();
+      
+      // 计算两个触摸点的距离
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      const distance = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) + 
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+      
+      if (lastTouchDistance > 0) {
+        const delta = distance - lastTouchDistance;
+        const scale = delta > 0 ? 0.95 : 1.05; // 放大或缩小
+        cameraRef.current.position.multiplyScalar(scale);
+        cameraRef.current.lookAt(0, 0, 0);
+      }
+      
+      lastTouchDistance = distance;
+    };
+
     const handleMouseUp = () => {
       mouseDown = false;
     };
@@ -126,11 +195,19 @@ export default function GeometryViewer() {
     renderer.domElement.style.position = 'absolute';
     renderer.domElement.style.top = '0';
     renderer.domElement.style.left = '0';
+    
+    // 添加鼠标事件监听器
     renderer.domElement.addEventListener('mousedown', handleMouseDown);
     renderer.domElement.addEventListener('mousemove', handleMouseMove);
     renderer.domElement.addEventListener('mouseup', handleMouseUp);
     renderer.domElement.addEventListener('wheel', handleWheel);
     renderer.domElement.addEventListener('dblclick', handleDoubleClick);
+    
+    // 添加触摸事件监听器（iPad/手机支持）
+    renderer.domElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+    renderer.domElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+    renderer.domElement.addEventListener('touchend', handleTouchEnd, { passive: false });
+    renderer.domElement.addEventListener('touchmove', handleTouchZoom, { passive: false }); // 双指缩放
 
     // 清空容器并添加3D画布
     if (mountRef.current) {
@@ -198,11 +275,18 @@ export default function GeometryViewer() {
         cancelAnimationFrame(frameRef.current);
       }
       
+      // 移除鼠标事件监听器
       renderer.domElement.removeEventListener('mousedown', handleMouseDown);
       renderer.domElement.removeEventListener('mousemove', handleMouseMove);
       renderer.domElement.removeEventListener('mouseup', handleMouseUp);
       renderer.domElement.removeEventListener('wheel', handleWheel);
       renderer.domElement.removeEventListener('dblclick', handleDoubleClick);
+      
+      // 移除触摸事件监听器
+      renderer.domElement.removeEventListener('touchstart', handleTouchStart);
+      renderer.domElement.removeEventListener('touchmove', handleTouchMove);
+      renderer.domElement.removeEventListener('touchend', handleTouchEnd);
+      renderer.domElement.removeEventListener('touchmove', handleTouchZoom);
       
       if (mountRef.current && renderer.domElement) {
         mountRef.current.removeChild(renderer.domElement);
@@ -323,12 +407,13 @@ export default function GeometryViewer() {
             </div>
             <div 
               ref={mountRef} 
-              className="w-full h-96 bg-gray-900 rounded-lg overflow-hidden relative"
+              className="w-full h-96 bg-gray-900 rounded-lg overflow-hidden relative select-none"
+              style={{ touchAction: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
             >
               {/* 3D画布将在这里动态插入 */}
             </div>
             <div className="mt-4 text-sm text-gray-600">
-              <p>💡 提示：拖拽鼠标旋转模型，滚轮缩放，双击重置视角</p>
+              <p>💡 提示：拖拽鼠标/手指旋转模型，滚轮/双指缩放，双击重置视角</p>
             </div>
           </div>
         </div>
