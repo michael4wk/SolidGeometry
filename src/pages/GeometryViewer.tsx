@@ -21,7 +21,17 @@ export default function GeometryViewer() {
   const meshRef = useRef<THREE.Mesh | null>(null);
   const frameRef = useRef<number | null>(null);
   
-  const [params, setParams] = useState({ width: 2, height: 2, depth: 2, radius: 1, tube: 0.3 });
+  const [params, setParams] = useState(() => {
+    // 根据当前几何体类型设置默认参数
+    const defaultParams = { width: 2, height: 2, depth: 2, radius: 2, tube: 0.3 };
+    if (type) {
+      const config = getGeometryConfig(type);
+      if (config?.defaultParams) {
+        return { ...defaultParams, ...config.defaultParams };
+      }
+    }
+    return defaultParams;
+  });
   const [properties, setProperties] = useState({ surfaceArea: 0, volume: 0 });
   const [autoRotate, setAutoRotate] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
@@ -85,6 +95,8 @@ export default function GeometryViewer() {
           // 这样可以确保所有几何体都有相同的丝滑旋转体验
           meshRef.current.rotation.y += deltaX * 0.01;
           meshRef.current.rotation.x += deltaY * 0.01;
+          // 添加Z轴旋转，让旋转更加自然和多维度
+          meshRef.current.rotation.z += (deltaX - deltaY) * 0.003;
       }
       
       mouseX = event.clientX;
@@ -119,6 +131,8 @@ export default function GeometryViewer() {
           // 这样可以确保所有几何体都有相同的丝滑旋转体验
           meshRef.current.rotation.y += deltaX * 0.01;
           meshRef.current.rotation.x += deltaY * 0.01;
+          // 添加Z轴旋转，让旋转更加自然和多维度
+          meshRef.current.rotation.z += (deltaX - deltaY) * 0.003;
       }
       
       mouseX = event.touches[0].clientX;
@@ -229,7 +243,7 @@ export default function GeometryViewer() {
       frameRef.current = requestAnimationFrame(animate);
       
       if (meshRef.current && autoRotate) {
-        // 根据几何体类型调整自动旋转方式
+        // 统一的自动旋转逻辑，让所有几何体旋转更自然
         switch (type) {
           case 'sphere':
             // 球体：多轴旋转，看起来更自然
@@ -237,15 +251,11 @@ export default function GeometryViewer() {
             meshRef.current.rotation.x += 0.002;
             meshRef.current.rotation.z += 0.001;
             break;
-          case 'cylinder':
-          case 'cone':
-            // 圆柱体和圆锥体：主要绕Y轴，轻微X轴旋转
+          default:
+            // 所有其他几何体：统一的旋转方式
             meshRef.current.rotation.y += 0.005;
             meshRef.current.rotation.x += 0.001;
-            break;
-          default:
-            // 立方体、圆环、四面体：标准Y轴旋转
-            meshRef.current.rotation.y += 0.005;
+            meshRef.current.rotation.z += 0.0005;
         }
       }
       
